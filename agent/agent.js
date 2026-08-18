@@ -390,10 +390,17 @@ async function testConnection(config) {
 async function pollOnce(config) {
   const authHeaders = { Authorization: `Bearer ${config.apiKey}` };
 
-  const fetchRes = await requestJson(`${config.cloudApiUrl}/api/sync/fetch`, {
+ // https://tally-bridge-server.onrender.com//api/sync/fetch
+
+  const fetchRes = await requestJson(`https://tally-bridge-server.onrender.com//api/sync/fetch`, {
     method: 'GET',
     headers: authHeaders,
   });
+
+  // const fetchRes = await requestJson(`${config.cloudApiUrl}/api/sync/fetch`, {
+  //   method: 'GET',
+  //   headers: authHeaders,
+  // });
 
   if (fetchRes.status !== 200 || !fetchRes.json) {
     console.log(`⚠️  Cloud fetch failed (HTTP ${fetchRes.status}). Will retry next cycle.`);
