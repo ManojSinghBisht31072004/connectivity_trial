@@ -1,0 +1,19 @@
+{
+  "voucherType": "Purchase",
+  "companyName": "Bhrama Enterprises",
+  "date": "2026-08-11",
+  "invoiceNumber": "INV-2026-8901",
+  "partyLedgerName": "Mahavir Electricals",
+  "partyGstin": "07AAAAA0000A1Z5",
+  "companyGstin": "07BBBBB1111B2Z6",
+  "taxableAmount": 10000,
+  "taxRatePercent": 18,
+  "narration": "Auto-processed by TallyScan AI",
+  "ledgers": {
+    "purchaseOrSales": "Purchase Accounts",
+    "cgst": "Input CGST",
+    "sgst": "Input SGST",
+    "igst": "Input IGST",
+    "bank": "HDFC Bank Current A/c"
+  }
+}

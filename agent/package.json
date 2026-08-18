@@ -1,0 +1,25 @@
+{
+  "name": "tally-bridge-agent",
+  "version": "1.0.0",
+  "description": "No-UI desktop agent: polls the cloud queue and pushes invoices into local TallyPrime",
+  "main": "agent.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node agent.js",
+    "test-connection": "node agent.js --test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  },
+  "bin": "agent.js",
+  "pkg": {
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "dist"
+  }
+}

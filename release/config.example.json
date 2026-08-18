@@ -1,0 +1,7 @@
+{
+  "cloudApiUrl": "https://your-app.onrender.com",
+  "apiKey": "ca_firm_secure_token_abc123",
+  "tallyHost": "127.0.0.1",
+  "tallyPort": 9000,
+  "pollIntervalSeconds": 10
+}

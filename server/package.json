@@ -1,0 +1,16 @@
+{
+  "name": "tally-bridge-server",
+  "version": "1.0.0",
+  "description": "Cloud queue that holds invoices until the local desktop agent picks them up for TallyPrime",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
