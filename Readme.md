@@ -172,3 +172,5 @@ Note: `pkg` bundles a full Node.js runtime into the executable, so it's
 All API endpoints except `/health` require `Authorization: Bearer <apiKey>`.
 The frontend page and the download link have no auth — the API key is typed
 into the page itself and only sent when you click Sync.
+
+//Working perfectly for Ledger creation.
