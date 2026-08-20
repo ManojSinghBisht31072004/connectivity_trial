@@ -51,20 +51,20 @@
  * ---------------------------------------------------------------------------
  */
 
-const express = require('express');
-const crypto = require('crypto');
-const path = require('path');
+const express = require("express");
+const crypto = require("crypto");
+const path = require("path");
 
 const app = express();
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: "2mb" }));
 
 // Serves public/index.html (the paste-JSON sync console) at "/",
 // and public/downloads/tally-bridge-agent.zip at "/downloads/...".
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, "public")));
 
 const PORT = process.env.PORT || 3000;
-const VALID_KEYS = (process.env.CLIENT_API_KEYS || 'dev_test_key_change_me')
-  .split(',')
+const VALID_KEYS = (process.env.CLIENT_API_KEYS || "dev_test_key_change_me")
+  .split(",")
   .map((k) => k.trim())
   .filter(Boolean);
 
@@ -78,7 +78,7 @@ function addJob(apiKey, invoice) {
     id: crypto.randomUUID(),
     apiKey,
     invoice,
-    status: 'pending', // pending -> processing -> completed | failed
+    status: "pending", // pending -> processing -> completed | failed
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     detail: null,
@@ -88,7 +88,9 @@ function addJob(apiKey, invoice) {
 }
 
 function getNextPendingJob(apiKey) {
-  return jobs.find((j) => j.apiKey === apiKey && j.status === 'pending') || null;
+  return (
+    jobs.find((j) => j.apiKey === apiKey && j.status === "pending") || null
+  );
 }
 
 function markJobStatus(apiKey, jobId, status, detail) {
@@ -107,11 +109,11 @@ function listJobs(apiKey) {
 // -------------------------------- Auth middleware ---------------------------
 
 function requireApiKey(req, res, next) {
-  const header = req.headers.authorization || '';
-  const key = header.startsWith('Bearer ') ? header.slice(7).trim() : null;
+  const header = req.headers.authorization || "";
+  const key = header.startsWith("Bearer ") ? header.slice(7).trim() : null;
 
   if (!key || !VALID_KEYS.includes(key)) {
-    return res.status(401).json({ error: 'Missing or invalid API key' });
+    return res.status(401).json({ error: "Missing or invalid API key" });
   }
   req.apiKey = key;
   next();
@@ -119,39 +121,56 @@ function requireApiKey(req, res, next) {
 
 // ----------------------------------- Routes ----------------------------------
 
-app.get('/health', (req, res) => {
+app.get("/health", (req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });
 });
 
 // SaaS UI (or a quick curl/Postman test) uploads an invoice here.
-app.post('/api/invoices', requireApiKey, (req, res) => {
+app.post("/api/invoices", requireApiKey, (req, res) => {
   const invoice = req.body;
 
-  const validTypes = ['Purchase', 'Sales', 'Receipt', 'Payment'];
+  const validTypes = ["Purchase", "Sales", "Receipt", "Payment", "Ledger"];
+
   if (!invoice || !validTypes.includes(invoice.voucherType)) {
     return res.status(400).json({
-      error: `Invalid invoice payload. "voucherType" must be one of: ${validTypes.join(', ')}`,
+      error: `Invalid invoice payload. "voucherType" must be one of: ${validTypes.join(", ")}`,
     });
   }
-  if (!invoice.companyName || !invoice.partyLedgerName || !invoice.date) {
-    return res.status(400).json({
-      error: 'Invoice must include at least companyName, partyLedgerName, and date',
-    });
+
+  // Ledger-specific validation
+  if (invoice.voucherType === "Ledger") {
+    if (!invoice.companyName || !invoice.ledgerName || !invoice.parent) {
+      return res.status(400).json({
+        error: "Ledger must include companyName, ledgerName, and parent",
+      });
+    }
+  } else {
+    // Voucher validation
+    if (!invoice.companyName || !invoice.partyLedgerName || !invoice.date) {
+      return res.status(400).json({
+        error:
+          "Invoice must include at least companyName, partyLedgerName, and date",
+      });
+    }
   }
 
   const job = addJob(req.apiKey, invoice);
-  res.status(201).json({ ok: true, jobId: job.id, status: job.status });
+  res.status(202).json({
+    queued: true,
+    jobId: job.id,
+    status: job.status,
+  });
 });
 
 // Desktop agent polls this.
-app.get('/api/sync/fetch', requireApiKey, (req, res) => {
+app.get("/api/sync/fetch", requireApiKey, (req, res) => {
   const job = getNextPendingJob(req.apiKey);
 
   if (!job) {
     return res.json({ hasPendingJob: false });
   }
 
-  job.status = 'processing';
+  job.status = "processing";
   job.updatedAt = new Date().toISOString();
 
   res.json({
@@ -162,23 +181,25 @@ app.get('/api/sync/fetch', requireApiKey, (req, res) => {
 });
 
 // Desktop agent reports back here.
-app.post('/api/sync/acknowledge', requireApiKey, (req, res) => {
+app.post("/api/sync/acknowledge", requireApiKey, (req, res) => {
   const { jobId, status, detail } = req.body || {};
 
-  if (!jobId || !['completed', 'failed'].includes(status)) {
-    return res.status(400).json({ error: 'Body must include jobId and status ("completed" or "failed")' });
+  if (!jobId || !["completed", "failed"].includes(status)) {
+    return res.status(400).json({
+      error: 'Body must include jobId and status ("completed" or "failed")',
+    });
   }
 
   const job = markJobStatus(req.apiKey, jobId, status, detail);
   if (!job) {
-    return res.status(404).json({ error: 'Job not found for this API key' });
+    return res.status(404).json({ error: "Job not found for this API key" });
   }
 
   res.json({ ok: true, jobId: job.id, status: job.status });
 });
 
 // Handy status view while you're testing.
-app.get('/api/jobs', requireApiKey, (req, res) => {
+app.get("/api/jobs", requireApiKey, (req, res) => {
   res.json({ jobs: listJobs(req.apiKey) });
 });
 

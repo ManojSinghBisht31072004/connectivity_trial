@@ -104,7 +104,17 @@ function xmlEscape(str) {
 }
 
 function toTallyDate(isoDate) {
-  return String(isoDate).replace(/-/g, '');
+  if (!isoDate) {
+    throw new Error('Invoice date is missing');
+  }
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDate));
+
+  if (!match) {
+    throw new Error(`Invalid invoice date: ${isoDate}. Expected YYYY-MM-DD`);
+  }
+
+  return `${match[1]}${match[2]}${match[3]}`;
 }
 
 function round2(n) {
@@ -200,6 +210,44 @@ function buildLedgerCreateMessage(name, parent) {
             <PARENT>${xmlEscape(parent)}</PARENT>
           </LEDGER>
         </TALLYMESSAGE>`;
+}
+
+function buildLedgerXml(inv) {
+  if (!inv.companyName) {
+    throw new Error('Ledger company name is missing');
+  }
+
+  if (!inv.ledgerName) {
+    throw new Error('Ledger name is missing');
+  }
+
+  if (!inv.parent) {
+    throw new Error('Ledger parent is missing');
+  }
+
+  const ledgerMessage = buildLedgerCreateMessage(
+    inv.ledgerName,
+    inv.parent
+  );
+
+  return `<ENVELOPE>
+  <HEADER>
+    <TALLYREQUEST>Import Data</TALLYREQUEST>
+  </HEADER>
+  <BODY>
+    <IMPORTDATA>
+      <REQUESTDESC>
+        <REPORTNAME>All Masters</REPORTNAME>
+        <STATICVARIABLES>
+          <SVCURRENTCOMPANY>${xmlEscape(inv.companyName)}</SVCURRENTCOMPANY>
+        </STATICVARIABLES>
+      </REQUESTDESC>
+      <REQUESTDATA>
+        ${ledgerMessage}
+      </REQUESTDATA>
+    </IMPORTDATA>
+  </BODY>
+</ENVELOPE>`;
 }
 
 // inv.autoCreateLedgers is optional: an array like
@@ -405,21 +453,54 @@ async function pollOnce(config) {
     return;
   }
 
-  const { jobId, invoice } = fetchRes.json;
-  console.log(`📦 Job ${jobId} found — ${invoice.voucherType} for "${invoice.partyLedgerName}". Building XML...`);
+if (invoice.voucherType === 'Ledger') {
+  console.log(
+    `📦 Job ${jobId} found — Ledger "${invoice.ledgerName}" for company "${invoice.companyName}". Building XML...`
+  );
+} else {
+  console.log(
+    `📦 Job ${jobId} found — ${invoice.voucherType} for "${invoice.partyLedgerName}". Building XML...`
+  );
+}
 
+  // let xml;
+  // try {
+  //   xml = buildVoucherXml(invoice);
+  // } catch (err) {
+  //   console.error(`❌ Could not build voucher XML: ${err.message}`);
+  //   await requestJson(`${config.cloudApiUrl}/api/sync/acknowledge`, {
+  //     method: 'POST',
+  //     headers: authHeaders,
+  //     body: { jobId, status: 'failed', detail: `XML build error: ${err.message}` },
+  //   });
+  //   return;
+  // }
   let xml;
-  try {
+
+try {
+  if (invoice.voucherType === 'Ledger') {
+    console.log(
+      `🏦 Creating ledger "${invoice.ledgerName}" under "${invoice.parent}"...`
+    );
+    xml = buildLedgerXml(invoice);
+  } else {
     xml = buildVoucherXml(invoice);
-  } catch (err) {
-    console.error(`❌ Could not build voucher XML: ${err.message}`);
-    await requestJson(`${config.cloudApiUrl}/api/sync/acknowledge`, {
-      method: 'POST',
-      headers: authHeaders,
-      body: { jobId, status: 'failed', detail: `XML build error: ${err.message}` },
-    });
-    return;
   }
+} catch (err) {
+  console.error(`❌ Could not build XML: ${err.message}`);
+
+  await requestJson(`${config.cloudApiUrl}/api/sync/acknowledge`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: {
+      jobId,
+      status: 'failed',
+      detail: `XML build error: ${err.message}`,
+    },
+  });
+
+  return;
+}
 
   let tallyResult;
   try {
