@@ -3,3 +3,18 @@ dist/
 config.json
 .env
 *.log
+
+# secrets - never commit
+config.json
+.env
+.env.local
+
+# dependencies
+node_modules/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+
+# compiled agent binaries
+*.exe

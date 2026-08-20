@@ -453,6 +453,8 @@ async function pollOnce(config) {
     return;
   }
 
+  const { jobId, invoice } = fetchRes.json;
+
 if (invoice.voucherType === 'Ledger') {
   console.log(
     `📦 Job ${jobId} found — Ledger "${invoice.ledgerName}" for company "${invoice.companyName}". Building XML...`
